@@ -18,29 +18,22 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  String? answer;
-  final loadingNotifier = ValueNotifier<bool>(false);
   final List<QuestionAnswer> questionAnswers = [];
-
-  late ScrollController scrollController;
-  late ChatGpt chatGpt;
   late TextEditingController inputQuestionController;
-  StreamSubscription<CompletionResponse>? streamSubscription;
+  late ScrollController scrollController;
 
   @override
   void initState() {
+    super.initState();
     inputQuestionController = TextEditingController();
     scrollController = ScrollController();
-    chatGpt = ChatGpt(apiKey: openAIApiKey);
-    super.initState();
   }
+
 
   @override
   void dispose() {
     inputQuestionController.dispose();
-    loadingNotifier.dispose();
     scrollController.dispose();
-    streamSubscription?.cancel();
     super.dispose();
   }
 
@@ -65,7 +58,7 @@ class _ChatScreenState extends State<ChatScreen> {
             TextInputWidget(
               textController: inputQuestionController,
               onSubmitted: () => _sendMessage(),
-            )
+            ),
           ],
         ),
       ),
@@ -76,35 +69,20 @@ class _ChatScreenState extends State<ChatScreen> {
     return Expanded(
       child: ListView.separated(
         controller: scrollController,
-        separatorBuilder: (context, index) => const SizedBox(
-          height: 12,
-        ),
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
         physics: const BouncingScrollPhysics(),
-        padding:
-            const EdgeInsets.only(bottom: 20, left: 16, right: 16, top: 16),
+        padding: const EdgeInsets.only(bottom: 20, left: 16, right: 16, top: 16),
         itemCount: questionAnswers.length,
         itemBuilder: (BuildContext context, int index) {
           final question = questionAnswers[index].question;
-          final answer = questionAnswers[index].answer;
-
+          final answer = questionAnswers[index].answer.toString().trim();
+          
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               UserQuestionWidget(question: question),
               const SizedBox(height: 16),
-              ValueListenableBuilder(
-                valueListenable: loadingNotifier,
-                builder: (_, bool isLoading, __) {
-                  if (answer.isEmpty && isLoading) {
-                    _scrollToBottom();
-                    return const LoadingWidget();
-                  } else {
-                    return ChatGptAnswerWidget(
-                      answer: answer.toString().trim(),
-                    );
-                  }
-                },
-              )
+              ChatGptAnswerWidget(answer: answer),
             ],
           );
         },
@@ -112,52 +90,34 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+
+StringBuffer _processUserMessage(String question) {
+  // Create a StringBuffer with the question followed by an exclamation mark
+  return StringBuffer("$question!");
+}
+
+void _sendMessage() {
+  final question = inputQuestionController.text.trim();
+  if (question.isEmpty) return;
+
+  setState(() {
+    // Add user question with the processed answer from _processUserMessage function
+    questionAnswers.add(QuestionAnswer(question: question, answer: _processUserMessage(question)));
+  });
+
+  inputQuestionController.clear();
+  _scrollToBottom();
+}
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-      );
+      if (scrollController.hasClients) {
+        scrollController.animateTo(
+          scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+        );
+      }
     });
-  }
-
-  void _sendMessage() async {
-    final question = inputQuestionController.text;
-    inputQuestionController.clear();
-    loadingNotifier.value = true;
-
-    setState(() => questionAnswers
-        .add(QuestionAnswer(question: question, answer: StringBuffer())));
-
-    final testRequest = CompletionRequest(
-      prompt: [question],
-      stream: true,
-      maxTokens: 500,
-      temperature: 1,
-      model: ChatGptModel.textDavinci003,
-    );
-    await _streamResponse(testRequest)
-        .whenComplete(() => loadingNotifier.value = true);
-  }
-
-  Future _streamResponse(CompletionRequest request) async {
-    streamSubscription?.cancel();
-    try {
-      final stream = await chatGpt.createCompletionStream(request);
-      streamSubscription = stream?.listen((event) {
-        if (event.streamMessageEnd) {
-          streamSubscription?.cancel();
-        } else {
-          setState(() {
-            questionAnswers.last.answer.write(event.choices?.first.text);
-            _scrollToBottom();
-          });
-        }
-      });
-    } catch (e) {
-      debugPrint("Error: $e");
-      setState(() => questionAnswers.last.answer.write("error"));
-    }
   }
 }

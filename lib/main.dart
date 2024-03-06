@@ -1,4 +1,5 @@
 import 'package:chatgpt/view/splash_screen.dart';
+import 'package:chatgpt/view/chat_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
