@@ -9,7 +9,8 @@ To get started, you need to have [Flutter](https://flutter.dev/docs/get-started/
 
 1. Open the terminal and navigate to the project folder.
 2. Run the command `flutter packages get` to install the required packages.
-3. Run `flutter run` to build and run the debug app on your emulator/phone
+3. Run `flutter create` to create the targets
+4. Run `flutter run` to build and run the debug app on your emulator/phone
 
 ## Credits
 
