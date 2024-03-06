@@ -12,6 +12,11 @@ To get started, you need to have [Flutter](https://flutter.dev/docs/get-started/
 3. Run `flutter create` to create the targets
 4. Run `flutter run` to build and run the debug app on your emulator/phone
 
+To make the release on the server:
+1. flutter build web
+   might need to do this: flutter build web --no-tree-shake-icons if there is error related to icons tree
+2. sudo cp -r build/web/* /var/www/html/
+
 ## Credits
 
 - [Flutter](https://flutter.dev) for providing an amazing cross-platform framework.
